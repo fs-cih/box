@@ -1,0 +1,128 @@
+<script>
+    // CRITICAL: PASTE YOUR APPS SCRIPT WEB APP URL HERE
+    const APPS_SCRIPT_URL = 'YOUR_APPS_SCRIPT_WEB_APP_URL_HERE'; 
+    
+    // State Variables
+    let tokenValidated = false; // Controls if a guess can be made
+    let correctPairsFound = 0;
+    const totalCorrectPairs = 4;
+
+    // --- POPUP/TOKEN FUNCTIONS ---
+    function openTokenModal() {
+        document.getElementById('tokenModal').style.display = 'block';
+    }
+
+    async function submitToken() {
+        const tokenInput = document.getElementById('token-input');
+        const token = tokenInput.value.trim();
+        const tokenFeedback = document.getElementById('token-feedback');
+
+        if (!token) {
+            tokenFeedback.textContent = "Please enter a token code.";
+            return;
+        }
+
+        tokenFeedback.textContent = "Checking token securely...";
+
+        try {
+            const response = await fetch(APPS_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type: 'token', token: token }),
+            });
+
+            const data = await response.json();
+            
+            if (data.success) {
+                tokenValidated = true;
+                tokenFeedback.textContent = data.message;
+                // Automatically close the modal after a short delay
+                setTimeout(() => {
+                    document.getElementById('tokenModal').style.display = 'none';
+                    document.getElementById('feedback').textContent = "Token accepted. Make your guess now!";
+                }, 1500);
+            } else {
+                tokenFeedback.textContent = "Error: " + data.message;
+                tokenInput.value = ''; // Clear input on failure
+            }
+        } catch (error) {
+            tokenFeedback.textContent = "Connection error.";
+            console.error('Token check error:', error);
+        }
+    }
+
+    // --- GUESS FUNCTION ---
+    async function checkPuzzle() {
+        if (!tokenValidated) {
+            document.getElementById('feedback').textContent = "You must enter a valid token first to make a guess!";
+            openTokenModal();
+            return;
+        }
+        
+        // Disable token usage until a new one is validated
+        tokenValidated = false; 
+        
+        const word1 = document.getElementById('word1').value.trim();
+        const word2 = document.getElementById('word2').value.trim();
+        
+        if (!word1 || !word2) {
+            document.getElementById('feedback').textContent = "Enter both words.";
+            return;
+        }
+
+        document.getElementById('feedback').textContent = "Submitting guess to the server...";
+
+        try {
+            const response = await fetch(APPS_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type: 'guess', word1: word1, word2: word2 }), // Explicitly setting type: 'guess'
+            });
+
+            const data = await response.json();
+            
+            if (data.correct) {
+                correctPairsFound++;
+                document.getElementById('feedback').textContent = `✅ CORRECT PAIR FOUND! Pairs: ${correctPairsFound}/${totalCorrectPairs}`;
+                if (correctPairsFound === totalCorrectPairs) {
+                    document.getElementById('feedback').textContent = "🎉 PUZZLE SOLVED! You found all 4 pairs!";
+                }
+            } else {
+                document.getElementById('feedback').textContent = `❌ INCORRECT. Your guess has been used. Enter a new token to guess again.`;
+            }
+
+            // Clear inputs and force next action to be token entry
+            document.getElementById('word1').value = '';
+            document.getElementById('word2').value = '';
+            
+        } catch (error) {
+            document.getElementById('feedback').textContent = "Error communicating with the puzzle server.";
+        }
+    }
+</script>
+
+<div id="tokenModal" style="display: none; border: 2px solid black; padding: 20px; background: #f9f9f9; position: fixed; top: 20%; left: 50%; transform: translate(-50%, 0); z-index: 100;">
+    <h3>Enter Guess Token (1 of 10)</h3>
+    <input type="text" id="token-input" placeholder="Enter your alphanumeric code">
+    <button onclick="submitToken()">Validate Token</button>
+    <p id="token-feedback"></p>
+</div>
+
+<h1>Logic Puzzle Guess</h1>
+<button onclick="openTokenModal()">Get Guess Token (Start Guess)</button>
+<p>
+    <label for="word1">Word 1:</label>
+    <input type="text" id="word1" placeholder="Enter first word">
+</p>
+<p>
+    <label for="word2">Word 2:</label>
+    <input type="text" id="word2" placeholder="Enter second word">
+</p>
+<button onclick="checkPuzzle()">Make Guess</button>
+<hr>
+<h2>Game Status</h2>
+<p>Tokens Used: <span id="token-used">0</span> (Total: 10)</p>
+<p>Pairs Found: <span id="pairs-found">0</span> (Total: 4)</p>
+<p>Result: <span id="feedback">Press "Get Guess Token" to begin.</span></p>
