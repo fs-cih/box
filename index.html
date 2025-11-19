@@ -41,6 +41,11 @@
       padding-right: 16px;
     }
 
+    .right-column {
+      width: 50%;
+      padding-left: 16px;
+    }
+
     .card {
       background-color: #ffffff;
       border-radius: 14px;
@@ -169,6 +174,44 @@
       margin-top: 4px;
     }
 
+    .refresh-button {
+      background-color: #007bff;
+      color: #ffffff;
+      cursor: pointer;
+      margin-bottom: 16px;
+    }
+
+    .refresh-button:hover {
+      background-color: #0064cc;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 12px;
+    }
+
+    .data-table th {
+      background-color: #d3d3d3;
+      padding: 8px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 14px;
+      border: 1px solid #c0c0c0;
+    }
+
+    .data-table td {
+      padding: 8px;
+      font-size: 14px;
+      border: 1px solid #e0e0e0;
+    }
+
+    .last-refreshed {
+      font-size: 12px;
+      color: #4a4a4a;
+      margin-top: 8px;
+    }
+
     @media (max-width: 900px) {
       .columns {
         flex-direction: column;
@@ -176,6 +219,10 @@
       .left-column {
         width: 100%;
         padding-right: 0;
+      }
+      .right-column {
+        width: 100%;
+        padding-left: 0;
       }
     }
   </style>
@@ -236,7 +283,89 @@
         </div>
       </div>
 
-      <!-- Right half intentionally left empty to match "left 1/2 of the screen" layout -->
+      <!-- Right Column: Check Guesses Remaining -->
+      <div class="right-column">
+        <div class="card">
+          <div class="card-title">Check Guesses Remaining</div>
+          
+          <button id="refreshDataButton" class="refresh-button">Refresh Data</button>
+          
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Date Used</th>
+                <th>Item 1</th>
+                <th>Item 2</th>
+              </tr>
+            </thead>
+            <tbody id="dataTableBody">
+              <tr>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+              </tr>
+              <tr>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+              </tr>
+              <tr>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+              </tr>
+              <tr>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+              </tr>
+              <tr>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+              </tr>
+              <tr>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+              </tr>
+              <tr>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+              </tr>
+              <tr>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+              </tr>
+              <tr>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+              </tr>
+              <tr>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+          
+          <div id="lastRefreshed" class="last-refreshed" style="display: none;"></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -378,6 +507,8 @@
     const selectTwo = document.getElementById("selectTwo");
     const guessButton = document.getElementById("guessButton");
     const guessStatus = document.getElementById("guessStatus");
+    const refreshDataButton = document.getElementById("refreshDataButton");
+    const lastRefreshed = document.getElementById("lastRefreshed");
 
     // Populate both selectors with entries
     function populateSelectors() {
@@ -531,6 +662,43 @@
       }
     }
 
+    // Refresh data from Google Sheets (placeholder for Apps Script integration)
+    async function refreshData() {
+      // TODO: This will be connected to Google Apps Script in the future
+      // For now, we'll just update the timestamp
+      
+      try {
+        // Future implementation: fetch data from Apps Script
+        // const url = SCRIPT_URL + "?action=getGuessesData";
+        // const response = await fetch(url);
+        // const data = await response.json();
+        // updateTable(data.rows);
+        
+        // For now, just show the timestamp
+        updateLastRefreshedTime();
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function updateLastRefreshedTime() {
+      const now = new Date();
+      const formattedDate = now.toLocaleDateString('en-US', {
+        month: '2-digit',
+        day: '2-digit',
+        year: 'numeric'
+      });
+      const formattedTime = now.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      });
+      
+      lastRefreshed.textContent = `Last Refreshed: ${formattedDate} ${formattedTime}`;
+      lastRefreshed.style.display = 'block';
+    }
+
     // ================= EVENT WIRING =================
     document.addEventListener("DOMContentLoaded", () => {
       populateSelectors();
@@ -564,6 +732,11 @@
         if (!guessButton.disabled) {
           submitGuess();
         }
+      });
+
+      refreshDataButton.addEventListener("click", (e) => {
+        e.preventDefault();
+        refreshData();
       });
     });
   </script>
