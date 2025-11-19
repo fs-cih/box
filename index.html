@@ -1,128 +1,539 @@
-<script>
-    // CRITICAL: PASTE YOUR APPS SCRIPT WEB APP URL HERE
-    const APPS_SCRIPT_URL = 'YOUR_APPS_SCRIPT_WEB_APP_URL_HERE'; 
-    
-    // State Variables
-    let tokenValidated = false; // Controls if a guess can be made
-    let correctPairsFound = 0;
-    const totalCorrectPairs = 4;
-
-    // --- POPUP/TOKEN FUNCTIONS ---
-    function openTokenModal() {
-        document.getElementById('tokenModal').style.display = 'block';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pair Checker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    * {
+      box-sizing: border-box;
     }
 
-    async function submitToken() {
-        const tokenInput = document.getElementById('token-input');
-        const token = tokenInput.value.trim();
-        const tokenFeedback = document.getElementById('token-feedback');
-
-        if (!token) {
-            tokenFeedback.textContent = "Please enter a token code.";
-            return;
-        }
-
-        tokenFeedback.textContent = "Checking token securely...";
-
-        try {
-            const response = await fetch(APPS_SCRIPT_URL, {
-                method: 'POST',
-                mode: 'cors',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ type: 'token', token: token }),
-            });
-
-            const data = await response.json();
-            
-            if (data.success) {
-                tokenValidated = true;
-                tokenFeedback.textContent = data.message;
-                // Automatically close the modal after a short delay
-                setTimeout(() => {
-                    document.getElementById('tokenModal').style.display = 'none';
-                    document.getElementById('feedback').textContent = "Token accepted. Make your guess now!";
-                }, 1500);
-            } else {
-                tokenFeedback.textContent = "Error: " + data.message;
-                tokenInput.value = ''; // Clear input on failure
-            }
-        } catch (error) {
-            tokenFeedback.textContent = "Connection error.";
-            console.error('Token check error:', error);
-        }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        sans-serif;
+      background-color: #f2f2f2;
+      color: #000000;
     }
 
-    // --- GUESS FUNCTION ---
-    async function checkPuzzle() {
-        if (!tokenValidated) {
-            document.getElementById('feedback').textContent = "You must enter a valid token first to make a guess!";
-            openTokenModal();
-            return;
-        }
-        
-        // Disable token usage until a new one is validated
-        tokenValidated = false; 
-        
-        const word1 = document.getElementById('word1').value.trim();
-        const word2 = document.getElementById('word2').value.trim();
-        
-        if (!word1 || !word2) {
-            document.getElementById('feedback').textContent = "Enter both words.";
-            return;
-        }
-
-        document.getElementById('feedback').textContent = "Submitting guess to the server...";
-
-        try {
-            const response = await fetch(APPS_SCRIPT_URL, {
-                method: 'POST',
-                mode: 'cors',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ type: 'guess', word1: word1, word2: word2 }), // Explicitly setting type: 'guess'
-            });
-
-            const data = await response.json();
-            
-            if (data.correct) {
-                correctPairsFound++;
-                document.getElementById('feedback').textContent = `✅ CORRECT PAIR FOUND! Pairs: ${correctPairsFound}/${totalCorrectPairs}`;
-                if (correctPairsFound === totalCorrectPairs) {
-                    document.getElementById('feedback').textContent = "🎉 PUZZLE SOLVED! You found all 4 pairs!";
-                }
-            } else {
-                document.getElementById('feedback').textContent = `❌ INCORRECT. Your guess has been used. Enter a new token to guess again.`;
-            }
-
-            // Clear inputs and force next action to be token entry
-            document.getElementById('word1').value = '';
-            document.getElementById('word2').value = '';
-            
-        } catch (error) {
-            document.getElementById('feedback').textContent = "Error communicating with the puzzle server.";
-        }
+    .page-wrapper {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 16px 48px;
     }
-</script>
 
-<div id="tokenModal" style="display: none; border: 2px solid black; padding: 20px; background: #f9f9f9; position: fixed; top: 20%; left: 50%; transform: translate(-50%, 0); z-index: 100;">
-    <h3>Enter Guess Token (1 of 10)</h3>
-    <input type="text" id="token-input" placeholder="Enter your alphanumeric code">
-    <button onclick="submitToken()">Validate Token</button>
-    <p id="token-feedback"></p>
-</div>
+    h1 {
+      margin-top: 0;
+      margin-bottom: 24px;
+      font-size: 28px;
+      font-weight: 600;
+    }
 
-<h1>Logic Puzzle Guess</h1>
-<button onclick="openTokenModal()">Get Guess Token (Start Guess)</button>
-<p>
-    <label for="word1">Word 1:</label>
-    <input type="text" id="word1" placeholder="Enter first word">
-</p>
-<p>
-    <label for="word2">Word 2:</label>
-    <input type="text" id="word2" placeholder="Enter second word">
-</p>
-<button onclick="checkPuzzle()">Make Guess</button>
-<hr>
-<h2>Game Status</h2>
-<p>Tokens Used: <span id="token-used">0</span> (Total: 10)</p>
-<p>Pairs Found: <span id="pairs-found">0</span> (Total: 4)</p>
-<p>Result: <span id="feedback">Press "Get Guess Token" to begin.</span></p>
+    .columns {
+      display: flex;
+      align-items: flex-start;
+      justify-content: flex-start;
+    }
+
+    .left-column {
+      width: 50%;
+      padding-right: 16px;
+    }
+
+    .card {
+      background-color: #ffffff;
+      border-radius: 14px;
+      padding: 20px 24px 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+    }
+
+    .card-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+
+    input[type="text"],
+    select {
+      width: 100%;
+      padding: 8px 10px;
+      font-size: 14px;
+      border-radius: 8px;
+      border: 1px solid #d0d0d0;
+      background-color: #fafafa;
+      color: inherit;
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease,
+        background-color 0.15s ease;
+    }
+
+    input[type="text"]:focus,
+    select:focus {
+      border-color: #007bff;
+      box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.15);
+      background-color: #ffffff;
+    }
+
+    .field-group {
+      margin-bottom: 14px;
+    }
+
+    .status-message {
+      margin-top: 6px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .status-success {
+      color: #2e7d32; /* green */
+    }
+
+    .status-error {
+      color: #b71c1c; /* dark red */
+    }
+
+    .selectors-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .selectors-row > div {
+      flex: 1;
+    }
+
+    .actions-row {
+      margin-top: 6px;
+    }
+
+    button {
+      border-radius: 999px;
+      border: none;
+      padding: 8px 20px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.15s ease, transform 0.05s ease,
+        box-shadow 0.15s ease;
+    }
+
+    button:active:not(:disabled) {
+      transform: translateY(1px);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) inset;
+    }
+
+    #guessButton {
+      background-color: #c9c9c9;
+      color: #444444;
+      cursor: not-allowed;
+    }
+
+    #guessButton.enabled {
+      background-color: #007bff;
+      color: #ffffff;
+      cursor: pointer;
+    }
+
+    #guessButton.enabled:hover {
+      background-color: #0064cc;
+    }
+
+    .helper-text {
+      font-size: 12px;
+      color: #666666;
+      margin-top: 4px;
+    }
+
+    @media (max-width: 900px) {
+      .columns {
+        flex-direction: column;
+      }
+      .left-column {
+        width: 100%;
+        padding-right: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-wrapper">
+    <h1>Pair Checker</h1>
+
+    <div class="columns">
+      <div class="left-column">
+        <!-- Card 1: One-Time Use Code -->
+        <div class="card">
+          <div class="card-title">One-Time Use Code</div>
+
+          <div class="field-group">
+            <label for="codeInput">Code</label>
+            <input
+              type="text"
+              id="codeInput"
+              autocomplete="off"
+              placeholder="Enter your one-time use code"
+            />
+            <div id="codeStatus" class="status-message"></div>
+            <div class="helper-text">
+              Code validity is checked with the server when you leave this box
+              or press Enter.
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: Pair Selection -->
+        <div class="card">
+          <div class="card-title">Select a Pair</div>
+
+          <div class="selectors-row">
+            <div class="field-group">
+              <label for="selectOne">First word/phrase</label>
+              <select id="selectOne">
+                <option value="">— Select —</option>
+              </select>
+            </div>
+
+            <div class="field-group">
+              <label for="selectTwo">Second word/phrase</label>
+              <select id="selectTwo">
+                <option value="">— Select —</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="actions-row">
+            <button id="guessButton" disabled>Guess</button>
+            <div id="guessStatus" class="status-message"></div>
+          </div>
+
+          <div class="helper-text">
+            The Guess button is enabled when a valid code has been verified and
+            two different entries are selected.
+          </div>
+        </div>
+      </div>
+
+      <!-- Right half intentionally left empty to match "left 1/2 of the screen" layout -->
+    </div>
+  </div>
+
+  <script>
+    // ================= CONFIGURATION =================
+    // Replace this with your deployed Google Apps Script web app URL.
+    // Your Apps Script can use e.parameter.action to distinguish actions:
+    //   action=validateCode   -> check one-time code and mark used if valid
+    //   action=checkPair      -> check whether a given pair is correct
+    //
+    // Expected JSON responses (examples):
+    //   { "result": "valid" }         // for validateCode
+    //   { "result": "used" }
+    //   { "result": "invalid" }
+    //
+    //   { "result": "correct" }       // for checkPair
+    //   { "result": "incorrect" }
+    //
+    const SCRIPT_URL = "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec";
+
+    // ================= DATA: WORDS / PHRASES =================
+    const entries = [
+      "55",
+      "1884",
+      "6333",
+      "(7-5) + (15-7)",
+      "05/09/13",
+      "19/22/25",
+      "23rd",
+      "2A Region 3",
+      "3 to Broad to 278 to 1",
+      "3rd",
+      "61%",
+      "Aurora",
+      "Aximili",
+      "Bank of America Plaza",
+      "BENTO",
+      "Bishop",
+      "Brentwood",
+      "Cañon City",
+      "Canyon",
+      "Chuy",
+      "Cliff",
+      "Colima",
+      "Darkwing Duck",
+      "December",
+      "Deer",
+      "Delaware",
+      "Delta",
+      "Desert Rose",
+      "Eagle",
+      "Eagles",
+      "Egypt",
+      "Eiffel 65",
+      "Elkhorn",
+      "Falcon",
+      "Florida",
+      "Four-Way Test",
+      "Friendsgiving",
+      "Gabriel",
+      "Game Keeper",
+      "Gary",
+      "Gator Skater",
+      "Gerald Schultz",
+      "Goku",
+      "Gold H",
+      "Harvard",
+      "Heiser",
+      "Hot Mama's Chilled Ice",
+      "Jaquval",
+      "Jardin Núñez",
+      "Karminee",
+      "La-No-Che Rash",
+      "LAX",
+      "Leak",
+      "Let It Be",
+      "March",
+      "Marlin",
+      "McCutcherson",
+      "Miles",
+      "Mine That Bird",
+      "Mississippi",
+      "Morès",
+      "Mosh Pit",
+      "Munson",
+      "Oak",
+      "PacSun",
+      "Panera & Moe's  & Cold Stone",
+      "Panther",
+      "Penny Lane",
+      "Polk",
+      "Power 9",
+      "Prairie",
+      "PS1",
+      "Ravnica",
+      "Rawlings",
+      "Red Alert",
+      "Reunion",
+      "Robber",
+      "Rock Against Bush, Vol. 2",
+      "Satarino",
+      "Sci-Fi City",
+      "Seven Major Changes",
+      "Sharky",
+      "Silver Moon",
+      "Speech",
+      "Stump",
+      "TAG",
+      "Texas",
+      "That Is So Cooooooool!",
+      "The Beat",
+      "Tipisa",
+      "Titan",
+      "Treaty",
+      "Trinity",
+      "Trumpet",
+      "Virginia",
+      "Volcán",
+      "Ward",
+      "Warrington",
+      "Warwick",
+      "We Survived the Class of '05",
+      "Wicked Game",
+      "WOW",
+      "Xanga",
+      "Yorktown",
+      "Zero Miles",
+      "Zion"
+    ];
+
+    // ================= APP LOGIC =================
+    let codeIsValid = false;
+    let currentCode = "";
+
+    const codeInput = document.getElementById("codeInput");
+    const codeStatus = document.getElementById("codeStatus");
+    const selectOne = document.getElementById("selectOne");
+    const selectTwo = document.getElementById("selectTwo");
+    const guessButton = document.getElementById("guessButton");
+    const guessStatus = document.getElementById("guessStatus");
+
+    // Populate both selectors with entries
+    function populateSelectors() {
+      entries.forEach((item) => {
+        const opt1 = document.createElement("option");
+        opt1.value = item;
+        opt1.textContent = item;
+        selectOne.appendChild(opt1);
+
+        const opt2 = document.createElement("option");
+        opt2.value = item;
+        opt2.textContent = item;
+        selectTwo.appendChild(opt2);
+      });
+    }
+
+    function setCodeStatus(message, type) {
+      codeStatus.textContent = message || "";
+      codeStatus.classList.remove("status-success", "status-error");
+      if (type === "success") {
+        codeStatus.classList.add("status-success");
+      } else if (type === "error") {
+        codeStatus.classList.add("status-error");
+      }
+    }
+
+    function setGuessStatus(message, type) {
+      guessStatus.textContent = message || "";
+      guessStatus.classList.remove("status-success", "status-error");
+      if (type === "success") {
+        guessStatus.classList.add("status-success");
+      } else if (type === "error") {
+        guessStatus.classList.add("status-error");
+      }
+    }
+
+    // Enable / disable Guess button based on rules
+    function updateGuessButtonState() {
+      const val1 = selectOne.value;
+      const val2 = selectTwo.value;
+      const canGuess =
+        codeIsValid && val1 && val2 && val1 !== val2;
+
+      guessButton.disabled = !canGuess;
+      guessButton.classList.toggle("enabled", canGuess);
+    }
+
+    // Validate code via Apps Script
+    async function validateCode() {
+      const code = codeInput.value.trim();
+      currentCode = code;
+      codeIsValid = false;
+      setGuessStatus("", null);
+      updateGuessButtonState();
+
+      if (!code) {
+        setCodeStatus("", null);
+        return;
+      }
+
+      try {
+        const url =
+          SCRIPT_URL +
+          "?action=validateCode&code=" +
+          encodeURIComponent(code);
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.result === "valid") {
+          codeIsValid = true;
+          setCodeStatus("Code validated.", "success");
+        } else if (data.result === "used") {
+          setCodeStatus(
+            "Code previously used. Not valid for use.",
+            "error"
+          );
+        } else {
+          setCodeStatus(
+            "Code could not be validated. Please try again.",
+            "error"
+          );
+        }
+      } catch (err) {
+        console.error(err);
+        setCodeStatus(
+          "There was a problem validating the code. Please try again.",
+          "error"
+        );
+      } finally {
+        updateGuessButtonState();
+      }
+    }
+
+    // Submit a guess via Apps Script
+    async function submitGuess() {
+      const first = selectOne.value;
+      const second = selectTwo.value;
+
+      if (!first || !second || first === second || !codeIsValid) {
+        updateGuessButtonState();
+        return;
+      }
+
+      setGuessStatus("Checking pairing…", null);
+
+      try {
+        const url =
+          SCRIPT_URL +
+          "?action=checkPair&code=" +
+          encodeURIComponent(currentCode) +
+          "&first=" +
+          encodeURIComponent(first) +
+          "&second=" +
+          encodeURIComponent(second);
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.result === "correct") {
+          setGuessStatus(
+            `Correct Pairing: ${first} and ${second}`,
+            "success"
+          );
+        } else if (data.result === "incorrect") {
+          setGuessStatus(
+            `Incorrect Pairing: ${first} and ${second}`,
+            "error"
+          );
+        } else {
+          setGuessStatus(
+            "Pair could not be checked. Please try again.",
+            "error"
+          );
+        }
+      } catch (err) {
+        console.error(err);
+        setGuessStatus(
+          "There was a problem checking the pairing. Please try again.",
+          "error"
+        );
+      }
+    }
+
+    // ================= EVENT WIRING =================
+    document.addEventListener("DOMContentLoaded", () => {
+      populateSelectors();
+
+      codeInput.addEventListener("blur", validateCode);
+      codeInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          validateCode();
+        }
+      });
+
+      selectOne.addEventListener("change", () => {
+        setGuessStatus("", null);
+        updateGuessButtonState();
+      });
+
+      selectTwo.addEventListener("change", () => {
+        setGuessStatus("", null);
+        updateGuessButtonState();
+      });
+
+      guessButton.addEventListener("click", (e) => {
+        e.preventDefault();
+        if (!guessButton.disabled) {
+          submitGuess();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
